@@ -1,0 +1,752 @@
+[
+ {
+  "character": "加",
+  "hoon": "더할",
+  "eum": "가"
+ },
+ {
+  "character": "可",
+  "hoon": "옳을",
+  "eum": "가"
+ },
+ {
+  "character": "角",
+  "hoon": "뿔",
+  "eum": "각"
+ },
+ {
+  "character": "感",
+  "hoon": "느낄",
+  "eum": "감"
+ },
+ {
+  "character": "客",
+  "hoon": "손님",
+  "eum": "객"
+ },
+ {
+  "character": "格",
+  "hoon": "격식",
+  "eum": "격"
+ },
+ {
+  "character": "決",
+  "hoon": "결단할",
+  "eum": "결"
+ },
+ {
+  "character": "結",
+  "hoon": "맺을",
+  "eum": "결"
+ },
+ {
+  "character": "輕",
+  "hoon": "가벼울",
+  "eum": "경"
+ },
+ {
+  "character": "敬",
+  "hoon": "공경할",
+  "eum": "경"
+ },
+ {
+  "character": "界",
+  "hoon": "지경",
+  "eum": "계"
+ },
+ {
+  "character": "苦",
+  "hoon": "괴로울",
+  "eum": "고"
+ },
+ {
+  "character": "考",
+  "hoon": "상고할",
+  "eum": "고"
+ },
+ {
+  "character": "告",
+  "hoon": "알릴",
+  "eum": "고"
+ },
+ {
+  "character": "曲",
+  "hoon": "굽을",
+  "eum": "곡"
+ },
+ {
+  "character": "公",
+  "hoon": "공변될",
+  "eum": "공"
+ },
+ {
+  "character": "果",
+  "hoon": "과실",
+  "eum": "과"
+ },
+ {
+  "character": "過",
+  "hoon": "지날",
+  "eum": "과"
+ },
+ {
+  "character": "球",
+  "hoon": "공",
+  "eum": "구"
+ },
+ {
+  "character": "郡",
+  "hoon": "고을",
+  "eum": "군"
+ },
+ {
+  "character": "貴",
+  "hoon": "귀할",
+  "eum": "귀"
+ },
+ {
+  "character": "根",
+  "hoon": "뿌리",
+  "eum": "근"
+ },
+ {
+  "character": "級",
+  "hoon": "등급",
+  "eum": "급"
+ },
+ {
+  "character": "吉",
+  "hoon": "길할",
+  "eum": "길"
+ },
+ {
+  "character": "能",
+  "hoon": "능할",
+  "eum": "능"
+ },
+ {
+  "character": "堂",
+  "hoon": "집",
+  "eum": "당"
+ },
+ {
+  "character": "待",
+  "hoon": "기다릴",
+  "eum": "대"
+ },
+ {
+  "character": "德",
+  "hoon": "덕",
+  "eum": "덕"
+ },
+ {
+  "character": "圖",
+  "hoon": "그림",
+  "eum": "도"
+ },
+ {
+  "character": "度",
+  "hoon": "법도",
+  "eum": "도"
+ },
+ {
+  "character": "童",
+  "hoon": "아이",
+  "eum": "동"
+ },
+ {
+  "character": "動",
+  "hoon": "움직일",
+  "eum": "동"
+ },
+ {
+  "character": "落",
+  "hoon": "떨어질",
+  "eum": "락"
+ },
+ {
+  "character": "良",
+  "hoon": "어질",
+  "eum": "량"
+ },
+ {
+  "character": "歷",
+  "hoon": "지낼",
+  "eum": "력"
+ },
+ {
+  "character": "例",
+  "hoon": "법식",
+  "eum": "례"
+ },
+ {
+  "character": "禮",
+  "hoon": "예도",
+  "eum": "례"
+ },
+ {
+  "character": "路",
+  "hoon": "길",
+  "eum": "로"
+ },
+ {
+  "character": "勞",
+  "hoon": "수고로울",
+  "eum": "로"
+ },
+ {
+  "character": "綠",
+  "hoon": "푸를",
+  "eum": "록"
+ },
+ {
+  "character": "流",
+  "hoon": "흐를",
+  "eum": "류"
+ },
+ {
+  "character": "李",
+  "hoon": "오얏",
+  "eum": "리"
+ },
+ {
+  "character": "亡",
+  "hoon": "망할",
+  "eum": "망"
+ },
+ {
+  "character": "買",
+  "hoon": "살",
+  "eum": "매"
+ },
+ {
+  "character": "賣",
+  "hoon": "팔",
+  "eum": "매"
+ },
+ {
+  "character": "美",
+  "hoon": "아름다울",
+  "eum": "미"
+ },
+ {
+  "character": "朴",
+  "hoon": "순박할",
+  "eum": "박"
+ },
+ {
+  "character": "反",
+  "hoon": "돌이킬",
+  "eum": "반"
+ },
+ {
+  "character": "發",
+  "hoon": "필",
+  "eum": "발"
+ },
+ {
+  "character": "法",
+  "hoon": "법",
+  "eum": "법"
+ },
+ {
+  "character": "兵",
+  "hoon": "군사",
+  "eum": "병"
+ },
+ {
+  "character": "病",
+  "hoon": "병",
+  "eum": "병"
+ },
+ {
+  "character": "福",
+  "hoon": "복",
+  "eum": "복"
+ },
+ {
+  "character": "服",
+  "hoon": "옷",
+  "eum": "복"
+ },
+ {
+  "character": "奉",
+  "hoon": "받들",
+  "eum": "봉"
+ },
+ {
+  "character": "冰",
+  "hoon": "얼음",
+  "eum": "빙"
+ },
+ {
+  "character": "仕",
+  "hoon": "벼슬할",
+  "eum": "사"
+ },
+ {
+  "character": "思",
+  "hoon": "생각",
+  "eum": "사"
+ },
+ {
+  "character": "史",
+  "hoon": "역사",
+  "eum": "사"
+ },
+ {
+  "character": "使",
+  "hoon": "하여금",
+  "eum": "사"
+ },
+ {
+  "character": "算",
+  "hoon": "셈",
+  "eum": "산"
+ },
+ {
+  "character": "相",
+  "hoon": "서로",
+  "eum": "상"
+ },
+ {
+  "character": "席",
+  "hoon": "자리",
+  "eum": "석"
+ },
+ {
+  "character": "雪",
+  "hoon": "눈",
+  "eum": "설"
+ },
+ {
+  "character": "省",
+  "hoon": "살필",
+  "eum": "성"
+ },
+ {
+  "character": "洗",
+  "hoon": "씻을",
+  "eum": "세"
+ },
+ {
+  "character": "消",
+  "hoon": "사라질",
+  "eum": "소"
+ },
+ {
+  "character": "速",
+  "hoon": "빠를",
+  "eum": "속"
+ },
+ {
+  "character": "孫",
+  "hoon": "손자",
+  "eum": "손"
+ },
+ {
+  "character": "樹",
+  "hoon": "나무",
+  "eum": "수"
+ },
+ {
+  "character": "數",
+  "hoon": "셈",
+  "eum": "수"
+ },
+ {
+  "character": "宿",
+  "hoon": "잠잘",
+  "eum": "숙"
+ },
+ {
+  "character": "順",
+  "hoon": "순할",
+  "eum": "순"
+ },
+ {
+  "character": "術",
+  "hoon": "재주",
+  "eum": "술"
+ },
+ {
+  "character": "習",
+  "hoon": "익힐",
+  "eum": "습"
+ },
+ {
+  "character": "勝",
+  "hoon": "이길",
+  "eum": "승"
+ },
+ {
+  "character": "始",
+  "hoon": "처음",
+  "eum": "시"
+ },
+ {
+  "character": "式",
+  "hoon": "법",
+  "eum": "식"
+ },
+ {
+  "character": "臣",
+  "hoon": "신하",
+  "eum": "신"
+ },
+ {
+  "character": "實",
+  "hoon": "열매",
+  "eum": "실"
+ },
+ {
+  "character": "失",
+  "hoon": "잃을",
+  "eum": "실"
+ },
+ {
+  "character": "兒",
+  "hoon": "아이",
+  "eum": "아"
+ },
+ {
+  "character": "愛",
+  "hoon": "사랑",
+  "eum": "애"
+ },
+ {
+  "character": "野",
+  "hoon": "들",
+  "eum": "야"
+ },
+ {
+  "character": "藥",
+  "hoon": "약",
+  "eum": "약"
+ },
+ {
+  "character": "陽",
+  "hoon": "볕",
+  "eum": "양"
+ },
+ {
+  "character": "洋",
+  "hoon": "큰바다",
+  "eum": "양"
+ },
+ {
+  "character": "漁",
+  "hoon": "고기잡을",
+  "eum": "어"
+ },
+ {
+  "character": "億",
+  "hoon": "억",
+  "eum": "억"
+ },
+ {
+  "character": "業",
+  "hoon": "일",
+  "eum": "업"
+ },
+ {
+  "character": "如",
+  "hoon": "같을",
+  "eum": "여"
+ },
+ {
+  "character": "然",
+  "hoon": "그럴",
+  "eum": "연"
+ },
+ {
+  "character": "溫",
+  "hoon": "따뜻할",
+  "eum": "온"
+ },
+ {
+  "character": "要",
+  "hoon": "구할",
+  "eum": "요"
+ },
+ {
+  "character": "勇",
+  "hoon": "날쌜",
+  "eum": "용"
+ },
+ {
+  "character": "雲",
+  "hoon": "구름",
+  "eum": "운"
+ },
+ {
+  "character": "運",
+  "hoon": "움직일",
+  "eum": "운"
+ },
+ {
+  "character": "園",
+  "hoon": "동산",
+  "eum": "원"
+ },
+ {
+  "character": "院",
+  "hoon": "집",
+  "eum": "원"
+ },
+ {
+  "character": "油",
+  "hoon": "기름",
+  "eum": "유"
+ },
+ {
+  "character": "由",
+  "hoon": "말미암을",
+  "eum": "유"
+ },
+ {
+  "character": "飮",
+  "hoon": "마실",
+  "eum": "음"
+ },
+ {
+  "character": "醫",
+  "hoon": "의원",
+  "eum": "의"
+ },
+ {
+  "character": "以",
+  "hoon": "써",
+  "eum": "이"
+ },
+ {
+  "character": "因",
+  "hoon": "인할",
+  "eum": "인"
+ },
+ {
+  "character": "任",
+  "hoon": "맡길",
+  "eum": "임"
+ },
+ {
+  "character": "者",
+  "hoon": "놈",
+  "eum": "자"
+ },
+ {
+  "character": "昨",
+  "hoon": "어제",
+  "eum": "작"
+ },
+ {
+  "character": "章",
+  "hoon": "글",
+  "eum": "장"
+ },
+ {
+  "character": "再",
+  "hoon": "두",
+  "eum": "재"
+ },
+ {
+  "character": "在",
+  "hoon": "있을",
+  "eum": "재"
+ },
+ {
+  "character": "材",
+  "hoon": "재목",
+  "eum": "재"
+ },
+ {
+  "character": "的",
+  "hoon": "과녁",
+  "eum": "적"
+ },
+ {
+  "character": "赤",
+  "hoon": "붉을",
+  "eum": "적"
+ },
+ {
+  "character": "典",
+  "hoon": "법",
+  "eum": "전"
+ },
+ {
+  "character": "戰",
+  "hoon": "싸움",
+  "eum": "전"
+ },
+ {
+  "character": "展",
+  "hoon": "펼",
+  "eum": "전"
+ },
+ {
+  "character": "庭",
+  "hoon": "뜰",
+  "eum": "정"
+ },
+ {
+  "character": "定",
+  "hoon": "정할",
+  "eum": "정"
+ },
+ {
+  "character": "題",
+  "hoon": "제목",
+  "eum": "제"
+ },
+ {
+  "character": "第",
+  "hoon": "차례",
+  "eum": "제"
+ },
+ {
+  "character": "族",
+  "hoon": "겨레",
+  "eum": "족"
+ },
+ {
+  "character": "卒",
+  "hoon": "군사",
+  "eum": "졸"
+ },
+ {
+  "character": "州",
+  "hoon": "고을",
+  "eum": "주"
+ },
+ {
+  "character": "注",
+  "hoon": "물댈",
+  "eum": "주"
+ },
+ {
+  "character": "止",
+  "hoon": "그칠",
+  "eum": "지"
+ },
+ {
+  "character": "知",
+  "hoon": "알",
+  "eum": "지"
+ },
+ {
+  "character": "紙",
+  "hoon": "종이",
+  "eum": "지"
+ },
+ {
+  "character": "集",
+  "hoon": "모일",
+  "eum": "집"
+ },
+ {
+  "character": "參",
+  "hoon": "참여할",
+  "eum": "참"
+ },
+ {
+  "character": "窓",
+  "hoon": "창문",
+  "eum": "창"
+ },
+ {
+  "character": "責",
+  "hoon": "꾸짖을",
+  "eum": "책"
+ },
+ {
+  "character": "淸",
+  "hoon": "맑을",
+  "eum": "청"
+ },
+ {
+  "character": "體",
+  "hoon": "몸",
+  "eum": "체"
+ },
+ {
+  "character": "初",
+  "hoon": "처음",
+  "eum": "초"
+ },
+ {
+  "character": "充",
+  "hoon": "채울",
+  "eum": "충"
+ },
+ {
+  "character": "特",
+  "hoon": "특별할",
+  "eum": "특"
+ },
+ {
+  "character": "表",
+  "hoon": "겉",
+  "eum": "표"
+ },
+ {
+  "character": "品",
+  "hoon": "물건",
+  "eum": "품"
+ },
+ {
+  "character": "風",
+  "hoon": "바람",
+  "eum": "풍"
+ },
+ {
+  "character": "必",
+  "hoon": "반드시",
+  "eum": "필"
+ },
+ {
+  "character": "河",
+  "hoon": "물",
+  "eum": "하"
+ },
+ {
+  "character": "幸",
+  "hoon": "다행",
+  "eum": "행"
+ },
+ {
+  "character": "現",
+  "hoon": "나타날",
+  "eum": "현"
+ },
+ {
+  "character": "號",
+  "hoon": "이름",
+  "eum": "호"
+ },
+ {
+  "character": "畫",
+  "hoon": "그림",
+  "eum": "화"
+ },
+ {
+  "character": "化",
+  "hoon": "될,변화할",
+  "eum": "화"
+ },
+ {
+  "character": "訓",
+  "hoon": "가르칠",
+  "eum": "훈"
+ },
+ {
+  "character": "凶",
+  "hoon": "흉할",
+  "eum": "흉"
+ },
+ {
+  "character": "黑",
+  "hoon": "검을",
+  "eum": "흑"
+ }
+]
