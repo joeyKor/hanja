@@ -9,6 +9,9 @@ import 'package:flutter/services.dart';
 import 'package:hanja/hanja.dart';
 
 import 'package:hanja/ranking_board_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import 'package:hanja/incorrect_hanja_screen.dart';
 
 class RankingQuizPage extends StatefulWidget {
 
@@ -33,6 +36,7 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
   List<Hanja> _allHanja = [];
 
   int _questionCount = 0;
+  List<Map<String, dynamic>> _sessionIncorrectHanja = [];
 
   @override
   void initState() {
@@ -165,6 +169,10 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
         _startNewQuestion();
       });
     } else {
+      HapticFeedback.vibrate(); // Add vibration for incorrect answer
+      if (_currentHanja != null) {
+        _saveIncorrectHanja(_currentHanja!);
+      }
       _gameOver();
     }
   }
@@ -183,6 +191,19 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
         return 3;
       default:
         return 1;
+    }
+  }
+
+  void _saveIncorrectHanja(Hanja hanja) {
+    final incorrectHanjaData = {
+      'character': hanja.character,
+      'hoon': hanja.hoon,
+      'eum': hanja.eum,
+      'level': hanja.level,
+    };
+    // Only add if not already in the session list (to avoid duplicates for the same session)
+    if (!_sessionIncorrectHanja.any((item) => item['character'] == hanja.character)) {
+      _sessionIncorrectHanja.add(incorrectHanjaData);
     }
   }
 
@@ -235,6 +256,7 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
                       'name': name,
                       'score': _score,
                       'timestamp': FieldValue.serverTimestamp(),
+                      'incorrectHanja': _sessionIncorrectHanja, // Save incorrect Hanja
                     });
 
                     if (rankings.length == 50) {
@@ -244,7 +266,7 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const RankingBoardPage(),
+                        builder: (context) => RankingBoardPage(),
                       ),
                     );
                   } else {

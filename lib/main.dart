@@ -72,12 +72,112 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
 
   int _remainingPlays = 30;
+  String _hanjaDate = '';
+  List<String> _dailyChallengeLevels = []; // Levels to be passed for ranking challenge
+  List<String> _passedChallengeLevels = []; // Levels already passed today
 
   @override
   void initState() {
     print('HomePage initState');
     super.initState();
     _loadPlayCount();
+    _initializeDailyChallenge();
+  }
+
+  String _getHanjaDate(DateTime date) {
+    final Map<int, String> hanjaNumbers = {
+      0: '〇', 1: '一', 2: '二', 3: '三', 4: '四',
+      5: '五', 6: '六', 7: '七', 8: '八', 9: '九'
+    };
+
+    String convertNumberToHanja(int num) {
+      if (num == 0) return hanjaNumbers[0]!;
+      String result = '';
+      if (num >= 1000) {
+        result += convertNumberToHanja(num ~/ 1000) + '千';
+        num %= 1000;
+      }
+      if (num >= 100) {
+        result += convertNumberToHanja(num ~/ 100) + '百';
+        num %= 100;
+      }
+      if (num >= 10) {
+        result += (num ~/ 10 == 1 ? '' : hanjaNumbers[num ~/ 10]!) + '十';
+        num %= 10;
+      }
+      if (num > 0) {
+        result += hanjaNumbers[num]!;
+      }
+      return result;
+    }
+
+    String convertMonthDayToHanja(int num) {
+      if (num == 0) return hanjaNumbers[0]!;
+      String result = '';
+      if (num >= 20) {
+        result += hanjaNumbers[num ~/ 10]! + '十';
+        num %= 10;
+      } else if (num >= 10) {
+        result += '十';
+        num %= 10;
+      }
+      if (num > 0) {
+        result += hanjaNumbers[num]!;
+      }
+      return result;
+    }
+
+    String yearHanja = convertNumberToHanja(date.year) + '年';
+    String monthHanja = convertMonthDayToHanja(date.month) + '月';
+    String dayHanja = convertMonthDayToHanja(date.day) + '日';
+
+    return '$yearHanja $monthHanja $dayHanja';
+  }
+
+  Future<void> _initializeDailyChallenge() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    setState(() {
+      _hanjaDate = _getHanjaDate(DateTime.now());
+    });
+
+    final savedChallengeDate = prefs.getString('daily_challenge_date');
+    final savedChallengeLevels = prefs.getStringList('daily_challenge_levels');
+    final savedPassedLevels = prefs.getStringList('daily_passed_levels');
+
+    if (savedChallengeDate == today && savedChallengeLevels != null) {
+      setState(() {
+        _dailyChallengeLevels = savedChallengeLevels;
+        _passedChallengeLevels = savedPassedLevels ?? [];
+      });
+    } else {
+      // New day or no levels saved, generate new ones
+      final allPossibleLevels = ['5급', '준4급', '4급', '준3급', '3급'];
+      allPossibleLevels.shuffle(Random());
+      final selectedLevels = allPossibleLevels.take(3).toList();
+
+      await prefs.setString('daily_challenge_date', today);
+      await prefs.setStringList('daily_challenge_levels', selectedLevels);
+      await prefs.setStringList('daily_passed_levels', []); // Reset passed levels for new day
+
+      setState(() {
+        _dailyChallengeLevels = selectedLevels;
+        _passedChallengeLevels = [];
+      });
+    }
+  }
+
+  Future<void> _handleChallengeLevelPassed(String level) async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    if (!_passedChallengeLevels.contains(level)) {
+      _passedChallengeLevels.add(level);
+      await prefs.setStringList('daily_passed_levels', _passedChallengeLevels);
+      // Re-initialize to update UI with filtered levels and message
+      _initializeDailyChallenge();
+    }
   }
 
   Future<void> _loadPlayCount() async {
@@ -154,7 +254,7 @@ class _HomePageState extends State<HomePage> {
         await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => QuizPage(quizHanja: quizHanja, level: level),
+            builder: (context) => QuizPage(quizHanja: quizHanja, level: level, onQuizPassed: _handleChallengeLevelPassed),
           ),
         );
         _loadPlayCount();
@@ -180,14 +280,37 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final levels = ['5급', '준4급', '4급', '준3급', '3급'];
 
+    final List<String> displayedChallengeLevels = _dailyChallengeLevels
+        .where((level) => !_passedChallengeLevels.contains(level))
+        .toList();
+
+    final int remainingLevelsToPass = displayedChallengeLevels.length;
+
+    String challengeMessage;
+    if (_passedChallengeLevels.length >= 2) {
+      challengeMessage = '랭킹 도전을 할 수 있습니다.';
+    } else {
+      final int neededToPass = 2 - _passedChallengeLevels.length;
+      challengeMessage = '랭킹 도전을 하려면 다음 중 $neededToPass개의 급수를 통과해야합니다.';
+    }
+
+    final bool canChallengeRanking = _passedChallengeLevels.length >= 2;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('한자 퀴즈'), centerTitle: true),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
+              Text(
+                _hanjaDate,
+                style: const TextStyle(
+                  fontSize: 20,
+                  color: Colors.white70,
+                ),
+              ),
+              const SizedBox(height: 10),
               Text(
                 '오늘 남은 횟수: $_remainingPlays',
                 style: const TextStyle(
@@ -197,18 +320,119 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 30),
+              Text(
+                challengeMessage,
+                style: const TextStyle(fontSize: 18, color: Colors.white70),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8.0, // gap between adjacent chips
+                runSpacing: 4.0, // gap between lines
+                alignment: WrapAlignment.center,
+                children: _dailyChallengeLevels.map((level) {
+                  final bool isPassed = _passedChallengeLevels.contains(level);
+                  return Chip(
+                    label: Text(level),
+                    backgroundColor: isPassed ? Colors.green.shade700 : Colors.yellowAccent.shade700,
+                    labelStyle: TextStyle(
+                      color: isPassed ? Colors.white : Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 30),
+
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.emoji_events),
+                    label: const Text('랭킹 도전'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: canChallengeRanking ? Colors.purple : Colors.grey,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40, // Increased padding for larger button
+                        vertical: 20, // Increased padding for larger button
+                      ),
+                    ),
+                    onPressed: canChallengeRanking
+                        ? () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RankingQuizPage(),
+                              ),
+                            );
+                          }
+                        : () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text('안내'),
+                                  content: const Text('랭킹 도전을 하려면 2개의 급수를 통과해야 합니다.'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('확인'),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.leaderboard),
+                    label: const Text('랭킹 보기'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40, // Increased padding for larger button
+                        vertical: 20, // Increased padding for larger button
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RankingBoardPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 30),
 
               const Text(
                 '도전할 급수를 선택하세요',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-              Expanded(
+              SizedBox(
+                height: 250, // Set a fixed height for the GridView container
                 child: GridView.count(
-                  crossAxisCount: 2,
+                  crossAxisCount: 3, // 3 buttons horizontally
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 2.5,
+                  childAspectRatio: 1.5, // Adjusted aspect ratio for increased height
                   children: levels.map((level) {
                     return ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -224,58 +448,12 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 20),
               // 6. Added Hanja Search button
+              // 6. Added Hanja Search button
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
                 alignment: WrapAlignment.center,
                 children: [
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.emoji_events),
-                    label: const Text('랭킹 도전'),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.purple,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RankingQuizPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.leaderboard),
-                    label: const Text('랭킹 보기'),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RankingBoardPage(),
-                        ),
-                      );
-                    },
-                  ),
-
                   ElevatedButton.icon(
                     icon: const Icon(Icons.warning_amber_rounded),
                     label: const Text('오늘틀린한자'),
@@ -347,6 +525,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
+
             ],
           ),
         ),
@@ -361,7 +540,8 @@ class _HomePageState extends State<HomePage> {
 class QuizPage extends StatefulWidget {
   final List<Hanja> quizHanja;
   final String level;
-  const QuizPage({super.key, required this.quizHanja, required this.level});
+  final Function(String level)? onQuizPassed;
+  const QuizPage({super.key, required this.quizHanja, required this.level, this.onQuizPassed});
 
   @override
   State<QuizPage> createState() => _QuizPageState();
@@ -438,7 +618,6 @@ class _QuizPageState extends State<QuizPage> {
 
   void _startCountdown() {
     if (_countdown > 0) {
-    if (_countdown > 0) {
       _countdownTimer = Timer(const Duration(seconds: 1), () { // Assign to _countdownTimer
         if (!mounted) return;
         setState(() {
@@ -451,11 +630,9 @@ class _QuizPageState extends State<QuizPage> {
         _revealAnswer();
       }
     }
-    }
   }
 
   void _handleAnswer(String answer) {
-    if (_answerLocked) return;
     if (_answerLocked) return;
     _countdownTimer?.cancel(); // Cancel timer immediately
     setState(() {
@@ -522,8 +699,10 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _showResult() {
-  void _showResult() {
     final passed = _score >= 8; // Passing threshold is 8 correct answers
+    if (passed && widget.onQuizPassed != null) {
+      widget.onQuizPassed!(widget.level);
+    }
     final message = passed
         ? '축하합니다! ${widget.quizHanja.length}문제 중 ${_score}문제를 맞혀 통과했습니다!'
         : '아쉽지만 ${widget.quizHanja.length}문제 중 ${_score}문제를 맞혔습니다. 다시 도전해보세요!';
@@ -648,62 +827,12 @@ class _QuizPageState extends State<QuizPage> {
   }
 }
 
-class ResultPage extends StatefulWidget {
-  final int score;
-  final int total;
-  final String level;
 
-  const ResultPage({
-    super.key,
-    required this.score,
-    required this.total,
-    required this.level,
-  });
-
-  @override
-  State<ResultPage> createState() => _ResultPageState();
-}
-
-class _ResultPageState extends State<ResultPage> {
-  @override
-  void initState() {
-    super.initState();
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('퀴즈 결과'), centerTitle: true),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-
-            const SizedBox(height: 40),
-            Text(
-              '총 ${widget.total}문제 중 ${widget.score}문제를 맞혔습니다.',
-              style: const TextStyle(fontSize: 24),
-            ),
-            const SizedBox(height: 60),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-              child: const Text('처음으로 돌아가기', style: TextStyle(fontSize: 20)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class HanjaDetailDialog extends StatelessWidget {
   final Hanja hanja;
 
-  const HanjaDetailDialog({super.key, required this.hanja});
+  const HanjaDetailDialog({Key? key, required this.hanja}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -711,69 +840,65 @@ class HanjaDetailDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
       backgroundColor: Colors.transparent,
-      child: contentBox(context),
-    );
-  }
-
-  contentBox(context) {
-    return Stack(
-      children: <Widget>[
-        Container(
-          padding: const EdgeInsets.only(
-            left: 20,
-            top: 45,
-            right: 20,
-            bottom: 20,
-          ),
-          margin: const EdgeInsets.only(top: 45),
-          decoration: BoxDecoration(
-            shape: BoxShape.rectangle,
-            color: const Color(0xFF2d2d2d),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black,
-                offset: Offset(0, 10),
-                blurRadius: 10,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                hanja.character,
-                style: const TextStyle(fontSize: 100, color: Colors.white),
-              ),
-              const SizedBox(height: 15),
-              Text(
-                '${hanja.hoon} ${hanja.eum}',
-                style: const TextStyle(fontSize: 30),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 22),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text(
-                    '닫기',
-                    style: TextStyle(fontSize: 18, color: Colors.cyanAccent),
+      child: Stack(
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.only(
+              left: 20,
+              top: 45,
+              right: 20,
+              bottom: 20,
+            ),
+            margin: const EdgeInsets.only(top: 45),
+            decoration: BoxDecoration(
+              shape: BoxShape.rectangle,
+              color: const Color(0xFF2d2d2d),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: Offset(0, 10),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  hanja.character,
+                  style: const TextStyle(fontSize: 100, color: Colors.white),
+                ),
+                const SizedBox(height: 15),
+                Text(
+                  '${hanja.hoon} ${hanja.eum}',
+                  style: const TextStyle(fontSize: 30),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 22),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text(
+                      '닫기',
+                      style: TextStyle(fontSize: 18, color: Colors.cyanAccent),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 class HanjaListPage extends StatefulWidget {
-  const HanjaListPage({super.key});
+  const HanjaListPage({Key? key}) : super(key: key);
 
   @override
   State<HanjaListPage> createState() => _HanjaListPageState();
@@ -913,7 +1038,7 @@ class _HanjaListPageState extends State<HanjaListPage> {
 
 // 4. Added HanjaSearchPage
 class HanjaSearchPage extends StatefulWidget {
-  const HanjaSearchPage({super.key});
+  const HanjaSearchPage({Key? key}) : super(key: key);
 
   @override
   State<HanjaSearchPage> createState() => _HanjaSearchPageState();
@@ -1059,7 +1184,7 @@ class _HanjaSearchPageState extends State<HanjaSearchPage> {
 class PreparationDialog extends StatelessWidget {
   final String level;
 
-  const PreparationDialog({super.key, required this.level});
+  const PreparationDialog({Key? key, required this.level}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -1067,82 +1192,78 @@ class PreparationDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
       backgroundColor: Colors.transparent,
-      child: contentBox(context),
-    );
-  }
-
-  contentBox(context) {
-    return Stack(
-      children: <Widget>[
-        Container(
-          padding: const EdgeInsets.only(
-            left: 20,
-            top: 65,
-            right: 20,
-            bottom: 20,
-          ),
-          margin: const EdgeInsets.only(top: 45),
-          decoration: BoxDecoration(
-            shape: BoxShape.rectangle,
-            color: const Color(0xFF2d2d2d),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black,
-                offset: Offset(0, 10),
-                blurRadius: 10,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                '알림',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
+      child: Stack(
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.only(
+              left: 20,
+              top: 65,
+              right: 20,
+              bottom: 20,
+            ),
+            margin: const EdgeInsets.only(top: 45),
+            decoration: BoxDecoration(
+              shape: BoxShape.rectangle,
+              color: const Color(0xFF2d2d2d),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: Offset(0, 10),
+                  blurRadius: 10,
                 ),
-              ),
-              const SizedBox(height: 15),
-              Text(
-                '$level은(는) 준비중입니다.',
-                style: const TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 22),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text(
-                    '확인',
-                    style: TextStyle(fontSize: 18, color: Colors.cyanAccent),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  '알림',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 15),
+                Text(
+                  '$level은(는) 준비중입니다.',
+                  style: const TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 22),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text(
+                      '확인',
+                      style: TextStyle(fontSize: 18, color: Colors.cyanAccent),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        Positioned(
-          left: 20,
-          right: 20,
-          child: CircleAvatar(
-            backgroundColor: Colors.transparent,
-            radius: 45,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(45)),
-              child: Icon(
-                Icons.info_outline,
-                size: 90,
-                color: Colors.cyanAccent,
+          Positioned(
+            left: 20,
+            right: 20,
+            child: CircleAvatar(
+              backgroundColor: Colors.transparent,
+              radius: 45,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(45)),
+                child: Icon(
+                  Icons.info_outline,
+                  size: 90,
+                  color: Colors.cyanAccent,
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
