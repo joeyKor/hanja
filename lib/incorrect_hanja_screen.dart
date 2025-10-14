@@ -110,7 +110,7 @@ class _IncorrectHanjaScreenState extends State<IncorrectHanjaScreen> {
                       showDialog(
                         context: context,
                         builder: (BuildContext context) {
-                          return HanjaDetailDialog(hanja: hanja);
+                          return IncorrectHanjaDetailDialog(hanja: hanja);
                         },
                       );
                     },
@@ -122,10 +122,10 @@ class _IncorrectHanjaScreenState extends State<IncorrectHanjaScreen> {
   }
 }
 
-class HanjaDetailDialog extends StatelessWidget {
+class IncorrectHanjaDetailDialog extends StatelessWidget {
   final IncorrectHanja hanja;
 
-  const HanjaDetailDialog({super.key, required this.hanja});
+  const IncorrectHanjaDetailDialog({super.key, required this.hanja});
 
   @override
   Widget build(BuildContext context) {

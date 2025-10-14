@@ -7,28 +7,22 @@ import 'package:flutter/services.dart';
 import 'package:hanja/incorrect_hanja_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hanja/ranking_quiz_page.dart';
+import 'package:hanja/ranking_board_page.dart';
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
+import 'package:hanja/hanja.dart';
+
+void main() async {
+  print('main started');
+  WidgetsFlutterBinding.ensureInitialized();
+  print('WidgetsFlutterBinding ensured');
+  Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('Firebase initialized');
+  print('Calling runApp');
   runApp(const MyApp());
-}
-
-// 1. Modified Hanja class
-class Hanja {
-  final String character;
-  final String hoon;
-  final String eum;
-  final String level;
-
-  Hanja({required this.character, required this.hoon, required this.eum, required this.level});
-
-  factory Hanja.fromJson(Map<String, dynamic> json, String level) {
-    return Hanja(
-      character: json['character'],
-      hoon: json['hoon'],
-      eum: json['eum'],
-      level: level,
-    );
-  }
 }
 
 class MyApp extends StatelessWidget {
@@ -36,6 +30,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('MyApp build method called');
     return MaterialApp(
       title: '한자 학습',
       theme: ThemeData.dark().copyWith(
@@ -80,6 +75,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
+    print('HomePage initState');
     super.initState();
     _loadPlayCount();
   }
@@ -145,7 +141,9 @@ class _HomePageState extends State<HomePage> {
       final String response = await rootBundle.loadString(fileName);
       final data = await json.decode(response) as List;
       // 2. Updated Hanja.fromJson call
-      final List<Hanja> allHanja = data.map((e) => Hanja.fromJson(e, level)).toList();
+      final List<Hanja> allHanja = data
+          .map((e) => Hanja.fromJson(e, level))
+          .toList();
       allHanja.shuffle();
       final List<Hanja> quizHanja = allHanja.take(10).toList();
 
@@ -274,6 +272,52 @@ class _HomePageState extends State<HomePage> {
                 runSpacing: 10,
                 alignment: WrapAlignment.center,
                 children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.emoji_events),
+                    label: const Text('랭킹 도전'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.purple,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 30,
+                        vertical: 15,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RankingQuizPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.leaderboard),
+                    label: const Text('랭킹 보기'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 30,
+                        vertical: 15,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RankingBoardPage(),
+                        ),
+                      );
+                    },
+                  ),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.bar_chart),
                     label: const Text('결과보기'),
@@ -465,15 +509,17 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _startCountdown() {
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_countdown > 1) {
+    if (_countdown > 0) {
+      Future.delayed(const Duration(seconds: 1), () {
+        if (!mounted) return;
         setState(() {
           _countdown--;
         });
-      } else {
-        _revealAnswer();
-      }
-    });
+        _startCountdown();
+      });
+    } else {
+      _revealAnswer();
+    }
   }
 
   void _handleAnswer(String answer) {
@@ -611,7 +657,7 @@ class _QuizPageState extends State<QuizPage> {
               child: Center(
                 child: Text(
                   currentHanja.character,
-                  style: const TextStyle(fontSize: 150, color: Colors.white),
+                  style: const TextStyle(fontSize: 120, color: Colors.white),
                 ),
               ),
             ),
@@ -634,16 +680,17 @@ class _QuizPageState extends State<QuizPage> {
               childAspectRatio: 2.5,
               children: _options.map((option) {
                 return ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _getButtonColor(option),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ).copyWith(
-                    foregroundColor: WidgetStateProperty.all(Colors.white),
-                  ),
+                  style:
+                      ElevatedButton.styleFrom(
+                        backgroundColor: _getButtonColor(option),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ).copyWith(
+                        foregroundColor: WidgetStateProperty.all(Colors.white),
+                      ),
                   onPressed: () => _handleAnswer(option),
-                  child: Text(option, style: const TextStyle(fontSize: 22)),
+                  child: Text(option, style: const TextStyle(fontSize: 20)),
                 );
               }).toList(),
             ),
@@ -685,8 +732,9 @@ class _ResultPageState extends State<ResultPage> {
     final scoreString = widget.score.toString();
 
     final existingData = prefs.getString(key);
-    Map<String, dynamic> scoreMap =
-        existingData != null ? json.decode(existingData) : {};
+    Map<String, dynamic> scoreMap = existingData != null
+        ? json.decode(existingData)
+        : {};
 
     int currentFrequency = scoreMap[scoreString] ?? 0;
     scoreMap[scoreString] = currentFrequency + 1;
@@ -841,7 +889,9 @@ class _HanjaListPageState extends State<HanjaListPage> {
       final String response = await rootBundle.loadString(fileName);
       final data = await json.decode(response) as List;
       // 3. Updated Hanja.fromJson call
-      final List<Hanja> hanja = data.map((e) => Hanja.fromJson(e, level)).toList();
+      final List<Hanja> hanja = data
+          .map((e) => Hanja.fromJson(e, level))
+          .toList();
       setState(() {
         _hanjaList = hanja;
       });
@@ -894,18 +944,23 @@ class _HanjaListPageState extends State<HanjaListPage> {
                             leading: Text(
                               hanja.character,
                               style: TextStyle(
-                                  fontSize: 33, color: Colors.yellow[100]),
+                                fontSize: 33,
+                                color: Colors.yellow[100],
+                              ),
                             ),
                             title: RichText(
                               text: TextSpan(
                                 style: const TextStyle(
-                                    fontSize: 17, color: Colors.white),
+                                  fontSize: 17,
+                                  color: Colors.white,
+                                ),
                                 children: <TextSpan>[
                                   TextSpan(text: '${hanja.hoon} '),
                                   TextSpan(
                                     text: hanja.eum,
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -948,7 +1003,7 @@ class _HanjaSearchPageState extends State<HanjaSearchPage> {
     super.initState();
     _loadAllHanja();
   }
-  
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -1030,16 +1085,24 @@ class _HanjaSearchPageState extends State<HanjaSearchPage> {
                     child: ListTile(
                       leading: Text(
                         hanja.character,
-                        style: TextStyle(fontSize: 33, color: Colors.yellow[100]),
+                        style: TextStyle(
+                          fontSize: 33,
+                          color: Colors.yellow[100],
+                        ),
                       ),
                       title: RichText(
                         text: TextSpan(
-                          style: const TextStyle(fontSize: 17, color: Colors.white),
+                          style: const TextStyle(
+                            fontSize: 17,
+                            color: Colors.white,
+                          ),
                           children: <TextSpan>[
                             TextSpan(text: '${hanja.hoon} '),
                             TextSpan(
                               text: hanja.eum,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -1064,7 +1127,6 @@ class _HanjaSearchPageState extends State<HanjaSearchPage> {
     );
   }
 }
-
 
 class ResultsSummaryPage extends StatefulWidget {
   const ResultsSummaryPage({super.key});
@@ -1103,7 +1165,10 @@ class _ResultsSummaryPageState extends State<ResultsSummaryPage> {
   Widget build(BuildContext context) {
     final levels = ['5급', '준4급', '4급', '준3급', '3급'];
     const textStyle = TextStyle(color: Colors.white);
-    const highlightedTextStyle = TextStyle(color: Colors.yellowAccent, fontWeight: FontWeight.bold);
+    const highlightedTextStyle = TextStyle(
+      color: Colors.yellowAccent,
+      fontWeight: FontWeight.bold,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('결과 요약'), centerTitle: true),
@@ -1167,7 +1232,9 @@ class _ResultsSummaryPageState extends State<ResultsSummaryPage> {
                   rows: List<DataRow>.generate(_totalQuestions + 1, (index) {
                     final score = _totalQuestions - index;
                     final frequency = _levelResults[score.toString()] ?? 0;
-                    final style = frequency > 0 ? highlightedTextStyle : textStyle;
+                    final style = frequency > 0
+                        ? highlightedTextStyle
+                        : textStyle;
                     return DataRow(
                       cells: [
                         DataCell(Text('$score점', style: style)),

@@ -34,5 +34,23 @@
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
+  <!-- Firebase App (the core Firebase SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <!-- Firebase Firestore (add other services you use here) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script>
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7zUlpi-VuzMqOxF7dhMw9qDX6tSqgvBM",
+      appId: "1:1027424430901:web:1da72bb94eea0b259cfa7c",
+      messagingSenderId: "1027424430901",
+      projectId: "ranking-1f9bb",
+      authDomain: "ranking-1f9bb.firebaseapp.com",
+      storageBucket: "ranking-1f9bb.firebasestorage.app",
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </body>
 </html>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1027424430901",
+    "project_id": "ranking-1f9bb",
+    "storage_bucket": "ranking-1f9bb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1027424430901:android:cce65d22a7f865309cfa7c",
+        "android_client_info": {
+          "package_name": "com.sedev.hanja"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZoq5G00DcHnKSyTBmfO0HyljZ1LaYRMY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
