@@ -70,6 +70,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+
   int _remainingPlays = 30;
 
   @override
@@ -360,7 +361,6 @@ class _HomePageState extends State<HomePage> {
 class QuizPage extends StatefulWidget {
   final List<Hanja> quizHanja;
   final String level;
-
   const QuizPage({super.key, required this.quizHanja, required this.level});
 
   @override
@@ -438,6 +438,7 @@ class _QuizPageState extends State<QuizPage> {
 
   void _startCountdown() {
     if (_countdown > 0) {
+    if (_countdown > 0) {
       _countdownTimer = Timer(const Duration(seconds: 1), () { // Assign to _countdownTimer
         if (!mounted) return;
         setState(() {
@@ -450,9 +451,11 @@ class _QuizPageState extends State<QuizPage> {
         _revealAnswer();
       }
     }
+    }
   }
 
   void _handleAnswer(String answer) {
+    if (_answerLocked) return;
     if (_answerLocked) return;
     _countdownTimer?.cancel(); // Cancel timer immediately
     setState(() {
@@ -518,6 +521,7 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
+  void _showResult() {
   void _showResult() {
     final passed = _score >= 8; // Passing threshold is 8 correct answers
     final message = passed
@@ -664,9 +668,9 @@ class _ResultPageState extends State<ResultPage> {
   @override
   void initState() {
     super.initState();
+  void initState() {
+    super.initState();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -676,6 +680,7 @@ class _ResultPageState extends State<ResultPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+
             const SizedBox(height: 40),
             Text(
               '총 ${widget.total}문제 중 ${widget.score}문제를 맞혔습니다.',
