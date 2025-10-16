@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -14,7 +13,6 @@ import 'package:intl/intl.dart';
 import 'package:hanja/incorrect_hanja_screen.dart';
 
 class RankingQuizPage extends StatefulWidget {
-
   const RankingQuizPage({super.key});
 
   @override
@@ -32,11 +30,11 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
   int _countdown = 10;
   Timer? _countdownTimer;
 
-  Map<String, List<Hanja>> _allHanjaByLevel = {};
-  List<Hanja> _allHanja = [];
+  final Map<String, List<Hanja>> _allHanjaByLevel = {};
+  final List<Hanja> _allHanja = [];
 
   int _questionCount = 0;
-  List<Map<String, dynamic>> _sessionIncorrectHanja = [];
+  final List<Map<String, dynamic>> _sessionIncorrectHanja = [];
 
   @override
   void initState() {
@@ -81,7 +79,7 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
       _showAnswer = false;
       _selectedAnswer = null;
       _answerLocked = false;
-      _countdown = _questionCount > 100 ? 2 : 3;
+      _countdown = _questionCount > 50 ? 2 : 3;
       _generateOptions();
     });
     _startCountdown();
@@ -134,7 +132,10 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
 
     _options = [_correctAnswer];
 
-    final allAnswers = _allHanja.map((h) => '${h.hoon} ${h.eum}').toSet().toList();
+    final allAnswers = _allHanja
+        .map((h) => '${h.hoon} ${h.eum}')
+        .toSet()
+        .toList();
     allAnswers.remove(_correctAnswer);
     allAnswers.shuffle(random);
 
@@ -194,7 +195,7 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
     }
   }
 
-  void _saveIncorrectHanja(Hanja hanja) {
+  Future<void> _saveIncorrectHanja(Hanja hanja) async {
     final incorrectHanjaData = {
       'character': hanja.character,
       'hoon': hanja.hoon,
@@ -202,18 +203,51 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
       'level': hanja.level,
     };
     // Only add if not already in the session list (to avoid duplicates for the same session)
-    if (!_sessionIncorrectHanja.any((item) => item['character'] == hanja.character)) {
+    if (!_sessionIncorrectHanja.any(
+      (item) => item['character'] == hanja.character,
+    )) {
       _sessionIncorrectHanja.add(incorrectHanjaData);
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final incorrectHanja = IncorrectHanja(
+      character: hanja.character,
+      hoon: hanja.hoon,
+      eum: hanja.eum,
+      level: hanja.level,
+      date: today,
+    );
+
+    final incorrectHanjaListJson = prefs.getStringList('incorrect_hanja') ?? [];
+
+    final isAlreadySaved = incorrectHanjaListJson.any((jsonString) {
+      try {
+        final savedHanja = IncorrectHanja.fromJson(json.decode(jsonString));
+        return savedHanja.character == incorrectHanja.character &&
+            savedHanja.date == today;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    if (!isAlreadySaved) {
+      incorrectHanjaListJson.add(json.encode(incorrectHanja.toJson()));
+      await prefs.setStringList('incorrect_hanja', incorrectHanjaListJson);
     }
   }
 
   Future<void> _gameOver() async {
     final rankingsRef = FirebaseFirestore.instance.collection('rankings');
-    final querySnapshot = await rankingsRef.orderBy('score', descending: true).limit(50).get();
+    final querySnapshot = await rankingsRef
+        .orderBy('score', descending: true)
+        .limit(50)
+        .get();
     final rankings = querySnapshot.docs;
 
     bool isTop50 = false;
-    if (_score > 0 && (rankings.length < 50 || _score > rankings.last.get('score'))) {
+    if (_score > 0 &&
+        (rankings.length < 50 || _score > rankings.last.get('score'))) {
       isTop50 = true;
     }
 
@@ -221,10 +255,111 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
       final nameController = TextEditingController();
       int rank = 1;
       for (final doc in rankings) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         if ((data['score'] ?? 0) > _score) {
           rank++;
         }
+      }
+
+      Widget title;
+      Widget content;
+
+      if (rank <= 3) {
+        title = Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.emoji_events,
+              color: rank == 1
+                  ? Colors.yellow.shade700
+                  : rank == 2
+                  ? Colors.grey.shade400
+                  : Colors.brown.shade400,
+              size: 30,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '🏆 TOP $rank 달성! 🏆',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+          ],
+        );
+        content = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_currentHanja != null) ...[
+              Text(
+                _currentHanja!.character,
+                style: const TextStyle(fontSize: 80),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${_currentHanja!.hoon} ${_currentHanja!.eum}',
+                style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              '최종 점수: ${_score.toStringAsFixed(1)}',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$rank위',
+              style: TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: rank == 1
+                    ? Colors.yellow.shade700
+                    : rank == 2
+                    ? Colors.grey.shade400
+                    : Colors.brown.shade400,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: '이름을 입력하세요'),
+            ),
+          ],
+        );
+      } else {
+        title = const Text('축하합니다! 50위 안에 드셨습니다!');
+        content = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_currentHanja != null) ...[
+              Text(
+                _currentHanja!.character,
+                style: const TextStyle(fontSize: 80),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${_currentHanja!.hoon} ${_currentHanja!.eum}',
+                style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              '최종 점수: ${_score.toStringAsFixed(1)}',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$rank위',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.cyanAccent,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: '이름을 입력하세요'),
+            ),
+          ],
+        );
       }
 
       showDialog(
@@ -232,20 +367,8 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
         barrierDismissible: false,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('축하합니다! 50위 안에 드셨습니다!'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('최종 점수: ${_score.toStringAsFixed(1)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text('$rank위', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.cyanAccent)),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: '이름을 입력하세요'),
-                ),
-              ],
-            ),
+            title: title,
+            content: content,
             actions: <Widget>[
               TextButton(
                 child: const Text('등록'),
@@ -256,7 +379,8 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
                       'name': name,
                       'score': _score,
                       'timestamp': FieldValue.serverTimestamp(),
-                      'incorrectHanja': _sessionIncorrectHanja, // Save incorrect Hanja
+                      'incorrectHanja':
+                          _sessionIncorrectHanja, // Save incorrect Hanja
                     });
 
                     if (rankings.length == 50) {
@@ -290,7 +414,24 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
         builder: (BuildContext context) {
           return AlertDialog(
             title: const Text('게임 종료'),
-            content: Text('최종 점수: ${_score.toStringAsFixed(1)}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_currentHanja != null) ...[
+                  Text(
+                    _currentHanja!.character,
+                    style: const TextStyle(fontSize: 80),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_currentHanja!.hoon} ${_currentHanja!.eum}',
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Text('최종 점수: ${_score.toStringAsFixed(1)}'),
+              ],
+            ),
             actions: <Widget>[
               TextButton(
                 child: const Text('확인'),
@@ -307,7 +448,9 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
 
   Color _getButtonColor(String option) {
     if (!_answerLocked) {
-      return _selectedAnswer == option ? Colors.yellow.shade700 : const Color(0xFF1F1F1F);
+      return _selectedAnswer == option
+          ? Colors.yellow.shade700
+          : const Color(0xFF1F1F1F);
     }
 
     if (option == _correctAnswer) {
@@ -343,10 +486,7 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('랭킹 도전'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('랭킹 도전'), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -354,7 +494,13 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
           children: <Widget>[
             Column(
               children: [
-                Text('점수: ${_score.toStringAsFixed(1)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(
+                  '점수: ${_score.toStringAsFixed(1)}',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   _currentHanja!.level,
@@ -391,14 +537,15 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
               childAspectRatio: 2.5,
               children: _options.map((option) {
                 return ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _getButtonColor(option),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ).copyWith(
-                    foregroundColor: MaterialStateProperty.all(Colors.white),
-                  ),
+                  style:
+                      ElevatedButton.styleFrom(
+                        backgroundColor: _getButtonColor(option),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ).copyWith(
+                        foregroundColor: WidgetStateProperty.all(Colors.white),
+                      ),
                   onPressed: () => _handleAnswer(option),
                   child: Text(option, style: const TextStyle(fontSize: 20)),
                 );

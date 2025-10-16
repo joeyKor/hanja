@@ -56,8 +56,11 @@ class RankingBoardPage extends StatelessWidget {
                 final doc = rankings[index];
                 final data = doc.data() as Map<String, dynamic>;
                 final timestamp = data['timestamp'] as Timestamp?;
-                final date = timestamp != null
+                final fullDate = timestamp != null
                     ? DateFormat('yyyy-MM-dd HH:mm').format(timestamp.toDate())
+                    : '';
+                final displayDate = timestamp != null
+                    ? DateFormat('MM-dd').format(timestamp.toDate())
                     : '';
 
                 Widget rankWidget;
@@ -65,10 +68,10 @@ class RankingBoardPage extends StatelessWidget {
                   rankWidget = Icon(
                     Icons.emoji_events,
                     color: index == 0
-                        ? Colors.yellow[700]
+                        ? const Color.fromARGB(255, 181, 135, 18)
                         : index == 1
-                        ? Colors.grey[400]
-                        : Colors.brown[400],
+                        ? const Color.fromARGB(255, 137, 137, 137)
+                        : const Color.fromARGB(255, 116, 85, 73),
                     size: 40,
                   );
                 } else {
@@ -81,104 +84,145 @@ class RankingBoardPage extends StatelessWidget {
                   );
                 }
 
-                return Card(
+                return Container(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  child: InkWell(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return RankingDetailDialog(
-                            rank: index + 1,
-                            name: data['name'] ?? '',
-                            score: data['score'] ?? 0,
-                            time: date,
-                            incorrectHanja:
-                                data['incorrectHanja'] as List? ?? [],
-                            level:
-                                data['level'] ??
-                                'N/A', // Assuming 'level' might be stored in ranking data
-                          );
-                        },
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          rankWidget,
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  data['name'] ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  (data['score'] ?? 0).toStringAsFixed(
-                                        (data['score'] ?? 0)
-                                                    .truncateToDouble() ==
-                                                (data['score'] ?? 0)
-                                            ? 0
-                                            : 1,
-                                      ) +
-                                      '점',
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ],
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    gradient: index < 3
+                        ? LinearGradient(
+                            colors: index == 0
+                                ? [
+                                    Colors.yellow.shade700,
+                                    Colors.amber.shade500,
+                                  ]
+                                : index == 1
+                                ? [
+                                    Colors.grey.shade500,
+                                    Colors.blueGrey.shade300,
+                                  ]
+                                : [
+                                    Colors.brown.shade500,
+                                    Colors.orange.shade300,
+                                  ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    boxShadow: index < 3
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: const Offset(0, 2),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                if (data['incorrectHanja'] != null &&
-                                    (data['incorrectHanja'] as List).isNotEmpty)
-                                  Wrap(
-                                    alignment: WrapAlignment.center,
-                                    spacing: 4.0,
-                                    runSpacing: 2.0,
-                                    children: (data['incorrectHanja'] as List)
-                                        .map((hanjaData) {
-                                          return Chip(
-                                            label: Text(
-                                              hanjaData['character'],
-                                              style: const TextStyle(
-                                                fontSize: 20,
-                                                color: Color.fromARGB(
-                                                  255,
-                                                  255,
-                                                  255,
-                                                  255,
+                          ]
+                        : [],
+                  ),
+                  child: Card(
+                    color: Colors.transparent, // Make card transparent
+                    elevation: 0, // No shadow from card
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: InkWell(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return RankingDetailDialog(
+                              rank: index + 1,
+                              name: data['name'] ?? '',
+                              score: data['score'] ?? 0,
+                              time: fullDate,
+                              incorrectHanja:
+                                  data['incorrectHanja'] as List? ?? [],
+                              level:
+                                  data['level'] ??
+                                  'N/A', // Assuming 'level' might be stored in ranking data
+                            );
+                          },
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            rankWidget,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    data['name'] ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    (data['score'] ?? 0).toStringAsFixed(
+                                          (data['score'] ?? 0)
+                                                      .truncateToDouble() ==
+                                                  (data['score'] ?? 0)
+                                              ? 0
+                                              : 1,
+                                        ) +
+                                        '점',
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  if (data['incorrectHanja'] != null &&
+                                      (data['incorrectHanja'] as List)
+                                          .isNotEmpty)
+                                    Wrap(
+                                      alignment: WrapAlignment.center,
+                                      spacing: 4.0,
+                                      runSpacing: 2.0,
+                                      children: (data['incorrectHanja'] as List)
+                                          .map((hanjaData) {
+                                            return Chip(
+                                              label: Text(
+                                                hanjaData['character'],
+                                                style: const TextStyle(
+                                                  fontSize: 23,
+                                                  color: Color.fromARGB(
+                                                    255,
+                                                    255,
+                                                    255,
+                                                    255,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          );
-                                        })
-                                        .toList(),
-                                  ),
-                              ],
+                                            );
+                                          })
+                                          .toList(),
+                                    ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            date,
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                        ],
+                            const SizedBox(width: 16),
+                            Text(
+                              displayDate,
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

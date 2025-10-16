@@ -70,10 +70,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
+  bool _rankingChallengeUnlocked = false;
   int _remainingPlays = 30;
   String _hanjaDate = '';
-  List<String> _dailyChallengeLevels = []; // Levels to be passed for ranking challenge
+  List<String> _dailyChallengeLevels =
+      []; // Levels to be passed for ranking challenge
   List<String> _passedChallengeLevels = []; // Levels already passed today
 
   @override
@@ -86,23 +87,31 @@ class _HomePageState extends State<HomePage> {
 
   String _getHanjaDate(DateTime date) {
     final Map<int, String> hanjaNumbers = {
-      0: '〇', 1: '一', 2: '二', 3: '三', 4: '四',
-      5: '五', 6: '六', 7: '七', 8: '八', 9: '九'
+      0: '〇',
+      1: '一',
+      2: '二',
+      3: '三',
+      4: '四',
+      5: '五',
+      6: '六',
+      7: '七',
+      8: '八',
+      9: '九',
     };
 
     String convertNumberToHanja(int num) {
       if (num == 0) return hanjaNumbers[0]!;
       String result = '';
       if (num >= 1000) {
-        result += convertNumberToHanja(num ~/ 1000) + '千';
+        result += '${convertNumberToHanja(num ~/ 1000)}千';
         num %= 1000;
       }
       if (num >= 100) {
-        result += convertNumberToHanja(num ~/ 100) + '百';
+        result += '${convertNumberToHanja(num ~/ 100)}百';
         num %= 100;
       }
       if (num >= 10) {
-        result += (num ~/ 10 == 1 ? '' : hanjaNumbers[num ~/ 10]!) + '十';
+        result += '${num ~/ 10 == 1 ? '' : hanjaNumbers[num ~/ 10]!}十';
         num %= 10;
       }
       if (num > 0) {
@@ -115,7 +124,7 @@ class _HomePageState extends State<HomePage> {
       if (num == 0) return hanjaNumbers[0]!;
       String result = '';
       if (num >= 20) {
-        result += hanjaNumbers[num ~/ 10]! + '十';
+        result += '${hanjaNumbers[num ~/ 10]!}十';
         num %= 10;
       } else if (num >= 10) {
         result += '十';
@@ -127,9 +136,9 @@ class _HomePageState extends State<HomePage> {
       return result;
     }
 
-    String yearHanja = convertNumberToHanja(date.year) + '年';
-    String monthHanja = convertMonthDayToHanja(date.month) + '月';
-    String dayHanja = convertMonthDayToHanja(date.day) + '日';
+    String yearHanja = '${convertNumberToHanja(date.year)}年';
+    String monthHanja = '${convertMonthDayToHanja(date.month)}月';
+    String dayHanja = '${convertMonthDayToHanja(date.day)}日';
 
     return '$yearHanja $monthHanja $dayHanja';
   }
@@ -159,7 +168,10 @@ class _HomePageState extends State<HomePage> {
 
       await prefs.setString('daily_challenge_date', today);
       await prefs.setStringList('daily_challenge_levels', selectedLevels);
-      await prefs.setStringList('daily_passed_levels', []); // Reset passed levels for new day
+      await prefs.setStringList(
+        'daily_passed_levels',
+        [],
+      ); // Reset passed levels for new day
 
       setState(() {
         _dailyChallengeLevels = selectedLevels;
@@ -254,7 +266,11 @@ class _HomePageState extends State<HomePage> {
         await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => QuizPage(quizHanja: quizHanja, level: level, onQuizPassed: _handleChallengeLevelPassed),
+            builder: (context) => QuizPage(
+              quizHanja: quizHanja,
+              level: level,
+              onQuizPassed: _handleChallengeLevelPassed,
+            ),
           ),
         );
         _loadPlayCount();
@@ -276,6 +292,78 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _showPasswordDialog(BuildContext context) {
+    final passwordController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('비밀번호 입력'),
+          content: TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(hintText: '비밀번호'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (passwordController.text == '0000') {
+                  setState(() {
+                    _rankingChallengeUnlocked = true;
+                  });
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text('성공'),
+                        content: const Text('랭킹 도전이 해제되었습니다.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('확인'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                } else {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text('오류'),
+                        content: const Text('비밀번호가 틀렸습니다.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('확인'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                }
+              },
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final levels = ['5급', '준4급', '4급', '준3급', '3급'];
@@ -294,7 +382,8 @@ class _HomePageState extends State<HomePage> {
       challengeMessage = '랭킹 도전을 하려면 다음 중 $neededToPass개의 급수를 통과해야합니다.';
     }
 
-    final bool canChallengeRanking = _passedChallengeLevels.length >= 2;
+    final bool canChallengeRanking =
+        _passedChallengeLevels.length >= 2 || _rankingChallengeUnlocked;
 
     return Scaffold(
       body: SafeArea(
@@ -305,10 +394,7 @@ class _HomePageState extends State<HomePage> {
             children: <Widget>[
               Text(
                 _hanjaDate,
-                style: const TextStyle(
-                  fontSize: 20,
-                  color: Colors.white70,
-                ),
+                style: const TextStyle(fontSize: 20, color: Colors.white70),
               ),
               const SizedBox(height: 10),
               Text(
@@ -334,7 +420,9 @@ class _HomePageState extends State<HomePage> {
                   final bool isPassed = _passedChallengeLevels.contains(level);
                   return Chip(
                     label: Text(level),
-                    backgroundColor: isPassed ? Colors.green.shade700 : Colors.yellowAccent.shade700,
+                    backgroundColor: isPassed
+                        ? Colors.green.shade700
+                        : Colors.yellowAccent.shade700,
                     labelStyle: TextStyle(
                       color: isPassed ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
@@ -355,7 +443,9 @@ class _HomePageState extends State<HomePage> {
                     label: const Text('랭킹 도전'),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      backgroundColor: canChallengeRanking ? Colors.purple : Colors.grey,
+                      backgroundColor: canChallengeRanking
+                          ? Colors.purple
+                          : Colors.grey,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -379,7 +469,9 @@ class _HomePageState extends State<HomePage> {
                               builder: (BuildContext context) {
                                 return AlertDialog(
                                   title: const Text('안내'),
-                                  content: const Text('랭킹 도전을 하려면 2개의 급수를 통과해야 합니다.'),
+                                  content: const Text(
+                                    '랭킹 도전을 하려면 2개의 급수를 통과해야 합니다.',
+                                  ),
                                   actions: <Widget>[
                                     TextButton(
                                       child: const Text('확인'),
@@ -427,12 +519,13 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 20),
               SizedBox(
-                height: 250, // Set a fixed height for the GridView container
+                height: 190, // Set a fixed height for the GridView container
                 child: GridView.count(
                   crossAxisCount: 3, // 3 buttons horizontally
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 1.5, // Adjusted aspect ratio for increased height
+                  childAspectRatio:
+                      1.5, // Adjusted aspect ratio for increased height
                   children: levels.map((level) {
                     return ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -446,7 +539,7 @@ class _HomePageState extends State<HomePage> {
                   }).toList(),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               // 6. Added Hanja Search button
               // 6. Added Hanja Search button
               Wrap(
@@ -465,7 +558,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
-                        vertical: 10,
+                        vertical: 15,
                       ),
                     ),
                     onPressed: () {
@@ -477,28 +570,31 @@ class _HomePageState extends State<HomePage> {
                       );
                     },
                   ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.book),
-                    label: const Text('급수한자보기'),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.blueGrey,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const HanjaListPage(),
+                  GestureDetector(
+                    onLongPress: () => _showPasswordDialog(context),
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.book),
+                      label: const Text('급수한자보기'),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.blueGrey,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      );
-                    },
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 15,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HanjaListPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.search),
@@ -511,7 +607,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
-                        vertical: 10,
+                        vertical: 15,
                       ),
                     ),
                     onPressed: () {
@@ -525,7 +621,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-
             ],
           ),
         ),
@@ -541,7 +636,12 @@ class QuizPage extends StatefulWidget {
   final List<Hanja> quizHanja;
   final String level;
   final Function(String level)? onQuizPassed;
-  const QuizPage({super.key, required this.quizHanja, required this.level, this.onQuizPassed});
+  const QuizPage({
+    super.key,
+    required this.quizHanja,
+    required this.level,
+    this.onQuizPassed,
+  });
 
   @override
   State<QuizPage> createState() => _QuizPageState();
@@ -618,7 +718,8 @@ class _QuizPageState extends State<QuizPage> {
 
   void _startCountdown() {
     if (_countdown > 0) {
-      _countdownTimer = Timer(const Duration(seconds: 1), () { // Assign to _countdownTimer
+      _countdownTimer = Timer(const Duration(seconds: 1), () {
+        // Assign to _countdownTimer
         if (!mounted) return;
         setState(() {
           _countdown--;
@@ -626,7 +727,8 @@ class _QuizPageState extends State<QuizPage> {
         _startCountdown();
       });
     } else {
-      if (!_answerLocked) { // Only reveal answer if not already locked by user selection
+      if (!_answerLocked) {
+        // Only reveal answer if not already locked by user selection
         _revealAnswer();
       }
     }
@@ -704,8 +806,8 @@ class _QuizPageState extends State<QuizPage> {
       widget.onQuizPassed!(widget.level);
     }
     final message = passed
-        ? '축하합니다! ${widget.quizHanja.length}문제 중 ${_score}문제를 맞혀 통과했습니다!'
-        : '아쉽지만 ${widget.quizHanja.length}문제 중 ${_score}문제를 맞혔습니다. 다시 도전해보세요!';
+        ? '축하합니다! ${widget.quizHanja.length}문제 중 $_score문제를 맞혀 통과했습니다!'
+        : '아쉽지만 ${widget.quizHanja.length}문제 중 $_score문제를 맞혔습니다. 다시 도전해보세요!';
 
     showDialog(
       context: context,
@@ -718,7 +820,9 @@ class _QuizPageState extends State<QuizPage> {
             TextButton(
               child: const Text('확인'),
               onPressed: () {
-                Navigator.of(context).popUntil((route) => route.isFirst); // Navigate to home menu
+                Navigator.of(
+                  context,
+                ).popUntil((route) => route.isFirst); // Navigate to home menu
               },
             ),
           ],
@@ -827,12 +931,10 @@ class _QuizPageState extends State<QuizPage> {
   }
 }
 
-
-
 class HanjaDetailDialog extends StatelessWidget {
   final Hanja hanja;
 
-  const HanjaDetailDialog({Key? key, required this.hanja}) : super(key: key);
+  const HanjaDetailDialog({super.key, required this.hanja});
 
   @override
   Widget build(BuildContext context) {
@@ -898,7 +1000,7 @@ class HanjaDetailDialog extends StatelessWidget {
 }
 
 class HanjaListPage extends StatefulWidget {
-  const HanjaListPage({Key? key}) : super(key: key);
+  const HanjaListPage({super.key});
 
   @override
   State<HanjaListPage> createState() => _HanjaListPageState();
@@ -1038,7 +1140,7 @@ class _HanjaListPageState extends State<HanjaListPage> {
 
 // 4. Added HanjaSearchPage
 class HanjaSearchPage extends StatefulWidget {
-  const HanjaSearchPage({Key? key}) : super(key: key);
+  const HanjaSearchPage({super.key});
 
   @override
   State<HanjaSearchPage> createState() => _HanjaSearchPageState();
@@ -1179,12 +1281,10 @@ class _HanjaSearchPageState extends State<HanjaSearchPage> {
   }
 }
 
-
-
 class PreparationDialog extends StatelessWidget {
   final String level;
 
-  const PreparationDialog({Key? key, required this.level}) : super(key: key);
+  const PreparationDialog({super.key, required this.level});
 
   @override
   Widget build(BuildContext context) {
