@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hanja/ranking_quiz_page.dart';
 import 'package:hanja/ranking_board_page.dart';
+import 'package:hanja/gosa_list_screen.dart'; // Import the new GosaListScreen
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -566,6 +567,29 @@ class _HomePageState extends State<HomePage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const IncorrectHanjaScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.menu_book),
+                    label: const Text('고사성어'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.brown,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const GosaListScreen(),
                         ),
                       );
                     },
