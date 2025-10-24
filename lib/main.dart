@@ -519,7 +519,7 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 20),
               SizedBox(
-                height: 190, // Set a fixed height for the GridView container
+                height: 180, // Set a fixed height for the GridView container
                 child: GridView.count(
                   crossAxisCount: 3, // 3 buttons horizontally
                   crossAxisSpacing: 16,

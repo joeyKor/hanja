@@ -237,7 +237,22 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
     }
   }
 
+  Future<void> _saveScore(double score) async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    final scoresJson = prefs.getString('daily_scores');
+    Map<String, dynamic> scores = scoresJson != null ? json.decode(scoresJson) : {};
+
+    List<double> todayScores = scores.containsKey(today) ? List<double>.from(scores[today]) : [];
+    todayScores.add(score);
+    scores[today] = todayScores;
+
+    await prefs.setString('daily_scores', json.encode(scores));
+  }
+
   Future<void> _gameOver() async {
+    await _saveScore(_score);
     final rankingsRef = FirebaseFirestore.instance.collection('rankings');
     final querySnapshot = await rankingsRef
         .orderBy('score', descending: true)

@@ -46,13 +46,22 @@ class IncorrectHanjaScreen extends StatefulWidget {
   State<IncorrectHanjaScreen> createState() => _IncorrectHanjaScreenState();
 }
 
-class _IncorrectHanjaScreenState extends State<IncorrectHanjaScreen> {
+class _IncorrectHanjaScreenState extends State<IncorrectHanjaScreen>
+    with SingleTickerProviderStateMixin {
   List<IncorrectHanja> _todaysIncorrectHanja = [];
+  late TabController _tabController;
+  Map<String, double> _dailyAverages = {};
 
   @override
   void initState() {
     super.initState();
-    _loadIncorrectHanja();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await _loadIncorrectHanja();
+    await _loadDailyAverages();
   }
 
   Future<void> _loadIncorrectHanja() async {
@@ -64,60 +73,149 @@ class _IncorrectHanjaScreenState extends State<IncorrectHanjaScreen> {
         .map((jsonString) => IncorrectHanja.fromJson(json.decode(jsonString)))
         .toList();
 
-    final todaysList = allIncorrectHanja.where((hanja) => hanja.date == today).toList();
+    final todaysList =
+        allIncorrectHanja.where((hanja) => hanja.date == today).toList();
 
     setState(() {
       _todaysIncorrectHanja = todaysList;
     });
   }
 
+  Future<void> _loadDailyAverages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final scoresJson = prefs.getString('daily_scores');
+    if (scoresJson == null) return;
+
+    final Map<String, dynamic> scores = json.decode(scoresJson);
+    final Map<String, double> averages = {};
+
+    scores.forEach((date, scoresList) {
+      final scores = List<double>.from(scoresList);
+      if (scores.isNotEmpty) {
+        averages[date] = scores.reduce((a, b) => a + b) / scores.length;
+      }
+    });
+
+    // Sort dates in descending order
+    final sortedDates = averages.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+    final sortedAverages = {for (var k in sortedDates) k: averages[k]!};
+
+    setState(() {
+      _dailyAverages = sortedAverages;
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('오늘 틀린 한자'), centerTitle: true),
-      body: _todaysIncorrectHanja.isEmpty
-          ? const Center(
-              child: Text(
-                '오늘 틀린 한자가 없습니다.',
-                style: TextStyle(fontSize: 20),
-              ),
-            )
-          : ListView.builder(
-              itemCount: _todaysIncorrectHanja.length,
-              itemBuilder: (context, index) {
-                final hanja = _todaysIncorrectHanja[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ListTile(
-                    leading: Text(
-                      hanja.character,
-                      style: TextStyle(fontSize: 33, color: Colors.yellow[100]),
-                    ),
-                    title: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(fontSize: 17, color: Colors.white),
-                        children: <TextSpan>[
-                          TextSpan(text: '${hanja.hoon} '),
-                          TextSpan(
-                            text: hanja.eum,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                    subtitle: Text('급수: ${hanja.level}'),
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return IncorrectHanjaDetailDialog(hanja: hanja);
-                        },
-                      );
-                    },
-                  ),
-                );
-              },
+      appBar: AppBar(
+        title: const Text('오답노트 및 통계'),
+        centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: '오늘 틀린 한자'),
+            Tab(text: '일별 평균'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildTodaysIncorrectHanjaTab(),
+          _buildDailyAverageTab(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTodaysIncorrectHanjaTab() {
+    return _todaysIncorrectHanja.isEmpty
+        ? const Center(
+            child: Text(
+              '오늘 틀린 한자가 없습니다.',
+              style: TextStyle(fontSize: 20),
             ),
+          )
+        : ListView.builder(
+            itemCount: _todaysIncorrectHanja.length,
+            itemBuilder: (context, index) {
+              final hanja = _todaysIncorrectHanja[index];
+              return Card(
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListTile(
+                  leading: Text(
+                    hanja.character,
+                    style: TextStyle(fontSize: 33, color: Colors.yellow[100]),
+                  ),
+                  title: RichText(
+                    text: TextSpan(
+                      style:
+                          const TextStyle(fontSize: 17, color: Colors.white),
+                      children: <TextSpan>[
+                        TextSpan(text: '${hanja.hoon} '),
+                        TextSpan(
+                          text: hanja.eum,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  subtitle: Text('급수: ${hanja.level}'),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return IncorrectHanjaDetailDialog(hanja: hanja);
+                      },
+                    );
+                  },
+                ),
+              );
+            },
+          );
+  }
+
+  Widget _buildDailyAverageTab() {
+    if (_dailyAverages.isEmpty) {
+      return const Center(
+        child: Text(
+          '아직 랭킹 도전 기록이 없습니다.',
+          style: TextStyle(fontSize: 20),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _dailyAverages.length,
+      itemBuilder: (context, index) {
+        final date = _dailyAverages.keys.elementAt(index);
+        final average = _dailyAverages[date]!;
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: ListTile(
+            title: Text(
+              date,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            trailing: Text(
+              '평균: ${average.toStringAsFixed(1)}점',
+              style: const TextStyle(
+                  fontSize: 18,
+                  color: Colors.cyanAccent,
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      },
     );
   }
 }
