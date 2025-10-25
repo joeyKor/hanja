@@ -10,6 +10,8 @@ import 'package:hanja/hanja.dart';
 import 'package:hanja/ranking_board_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:hanja/bonus_gosa_quiz_page.dart';
+import 'package:hanja/eum_quiz_page.dart';
 import 'package:hanja/incorrect_hanja_screen.dart';
 
 class RankingQuizPage extends StatefulWidget {
@@ -72,14 +74,19 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
     }
   }
 
-  void _startNewQuestion() {
+  void _startNewQuestion({double? updatedScore}) {
+    if (updatedScore != null) {
+      setState(() {
+        _score = updatedScore;
+      });
+    }
     _questionCount++;
     setState(() {
       _currentHanja = _selectNextHanja();
       _showAnswer = false;
       _selectedAnswer = null;
       _answerLocked = false;
-      _countdown = _questionCount > 50 ? 2 : 3;
+      _countdown = _questionCount > 40 ? 2 : 3;
       _generateOptions();
     });
     _startCountdown();
@@ -163,12 +170,42 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
     });
 
     if (_selectedAnswer == _correctAnswer) {
+      final newScore = _score + _getScoreForLevel(_currentHanja!.level);
       setState(() {
-        _score += _getScoreForLevel(_currentHanja!.level);
+        _score = newScore;
       });
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        _startNewQuestion();
-      });
+
+      if (_questionCount == 80) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EumQuizPage(
+              initialScore: newScore,
+              initialQuestionCount: _questionCount,
+            ),
+          ),
+        );
+        return;
+      }
+
+      bool isBonusRound = (_questionCount == 5) ||
+          (_questionCount >= 10 && _questionCount % 10 == 0);
+
+      if (isBonusRound) {
+        Future.delayed(const Duration(milliseconds: 1000), () async {
+          final updatedScore = await Navigator.push<double>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BonusGosaQuizPage(initialScore: newScore),
+            ),
+          );
+          _startNewQuestion(updatedScore: updatedScore ?? newScore);
+        });
+      } else {
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          _startNewQuestion();
+        });
+      }
     } else {
       HapticFeedback.vibrate(); // Add vibration for incorrect answer
       if (_currentHanja != null) {
@@ -242,22 +279,71 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     final scoresJson = prefs.getString('daily_scores');
-    Map<String, dynamic> scores = scoresJson != null ? json.decode(scoresJson) : {};
+    Map<String, dynamic> scores =
+        scoresJson != null ? json.decode(scoresJson) : {};
 
-    List<double> todayScores = scores.containsKey(today) ? List<double>.from(scores[today]) : [];
+    List<double> todayScores =
+        scores.containsKey(today) ? List<double>.from(scores[today]) : [];
     todayScores.add(score);
     scores[today] = todayScores;
 
     await prefs.setString('daily_scores', json.encode(scores));
   }
 
+  Future<void> _unlockAndShowReward() async {
+    final prefs = await SharedPreferences.getInstance();
+    final unlockedImages = prefs.getStringList('unlocked_images') ?? [];
+
+    final allImageNumbers =
+        List.generate(70, (index) => (index + 1).toString().padLeft(3, '0'));
+    final lockedImages =
+        allImageNumbers.where((img) => !unlockedImages.contains(img)).toList();
+
+    if (lockedImages.isEmpty) {
+      // All images are unlocked, maybe show a message
+      return;
+    }
+
+    final random = Random();
+    final imageToUnlock = lockedImages[random.nextInt(lockedImages.length)];
+
+    unlockedImages.add(imageToUnlock);
+    await prefs.setStringList('unlocked_images', unlockedImages);
+
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('갤러리 해금!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/images/$imageToUnlock.png'),
+              const SizedBox(height: 16),
+              Text('$imageToUnlock번 그림을 획득했습니다!'),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('확인'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _gameOver() async {
+    _countdownTimer?.cancel();
     await _saveScore(_score);
+
     final rankingsRef = FirebaseFirestore.instance.collection('rankings');
-    final querySnapshot = await rankingsRef
-        .orderBy('score', descending: true)
-        .limit(50)
-        .get();
+    final querySnapshot =
+        await rankingsRef.orderBy('score', descending: true).limit(50).get();
     final rankings = querySnapshot.docs;
 
     bool isTop50 = false;
@@ -288,8 +374,8 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
               color: rank == 1
                   ? Colors.yellow.shade700
                   : rank == 2
-                  ? Colors.grey.shade400
-                  : Colors.brown.shade400,
+                      ? Colors.grey.shade400
+                      : Colors.brown.shade400,
               size: 30,
             ),
             const SizedBox(width: 8),
@@ -327,8 +413,8 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
                 color: rank == 1
                     ? Colors.yellow.shade700
                     : rank == 2
-                    ? Colors.grey.shade400
-                    : Colors.brown.shade400,
+                        ? Colors.grey.shade400
+                        : Colors.brown.shade400,
               ),
             ),
             const SizedBox(height: 16),
@@ -377,7 +463,8 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
         );
       }
 
-      showDialog(
+      if (!mounted) return;
+      final name = await showDialog<String>(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
@@ -387,43 +474,47 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
             actions: <Widget>[
               TextButton(
                 child: const Text('등록'),
-                onPressed: () async {
-                  final name = nameController.text;
-                  if (name.isNotEmpty) {
-                    await rankingsRef.add({
-                      'name': name,
-                      'score': _score,
-                      'timestamp': FieldValue.serverTimestamp(),
-                      'incorrectHanja':
-                          _sessionIncorrectHanja, // Save incorrect Hanja
-                    });
-
-                    if (rankings.length == 50) {
-                      await rankingsRef.doc(rankings.last.id).delete();
-                    }
-
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RankingBoardPage(),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('이름을 입력해주세요.'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
+                onPressed: () {
+                  Navigator.of(context).pop(nameController.text);
                 },
               ),
             ],
           );
         },
       );
+
+      if (name != null && name.isNotEmpty) {
+        await rankingsRef.add({
+          'name': name,
+          'score': _score,
+          'timestamp': FieldValue.serverTimestamp(),
+          'incorrectHanja': _sessionIncorrectHanja,
+        });
+
+        if (rankings.length == 50) {
+          await rankingsRef.doc(rankings.last.id).delete();
+        }
+
+        if (_score > 150) {
+          await _unlockAndShowReward();
+        }
+
+        if (!mounted) return;
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('이름을 입력해주세요.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        // if user cancels, just go back to home
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } else {
-      showDialog(
+      if (!mounted) return;
+      await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
@@ -451,13 +542,20 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
               TextButton(
                 child: const Text('확인'),
                 onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  Navigator.of(context).pop();
                 },
               ),
             ],
           );
         },
       );
+
+      if (_score > 150) {
+        await _unlockAndShowReward();
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
@@ -501,7 +599,7 @@ class _RankingQuizPageState extends State<RankingQuizPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('랭킹 도전'), centerTitle: true),
+      appBar: AppBar(title: Text('랭킹 도전 - $_questionCount번째 문제'), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

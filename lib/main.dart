@@ -9,7 +9,9 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hanja/ranking_quiz_page.dart';
 import 'package:hanja/ranking_board_page.dart';
+import 'package:hanja/eum_quiz_page.dart';
 import 'package:hanja/gosa_list_screen.dart'; // Import the new GosaListScreen
+import 'package:hanja/gallery_screen.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -72,7 +74,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _rankingChallengeUnlocked = false;
-  int _remainingPlays = 30;
   String _hanjaDate = '';
   List<String> _dailyChallengeLevels =
       []; // Levels to be passed for ranking challenge
@@ -82,7 +83,6 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     print('HomePage initState');
     super.initState();
-    _loadPlayCount();
     _initializeDailyChallenge();
   }
 
@@ -193,39 +193,8 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _loadPlayCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    final lastPlayDate = prefs.getString('last_play_date') ?? '';
-
-    int playCount = 0;
-    if (lastPlayDate == today) {
-      playCount = prefs.getInt('play_count') ?? 0;
-    }
-
-    setState(() {
-      _remainingPlays = 30 - playCount;
-    });
-  }
 
   Future<void> _loadAndStartQuiz(BuildContext context, String level) async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-
-    int playCount = prefs.getInt('play_count') ?? 0;
-    String lastPlayDate = prefs.getString('last_play_date') ?? '';
-
-    if (lastPlayDate != today) {
-      playCount = 0;
-    }
-
-    if (playCount >= 30) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('하루에 30번만 플레이할 수 있습니다. 내일 다시 시도해주세요.')),
-      );
-      return;
-    }
-
     String fileName;
     switch (level) {
       case '5급':
@@ -261,9 +230,6 @@ class _HomePageState extends State<HomePage> {
       final List<Hanja> quizHanja = allHanja.take(10).toList();
 
       if (quizHanja.isNotEmpty) {
-        await prefs.setInt('play_count', playCount + 1);
-        await prefs.setString('last_play_date', today);
-
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -274,7 +240,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         );
-        _loadPlayCount();
       } else {
         showDialog(
           context: context,
@@ -331,6 +296,21 @@ class _HomePageState extends State<HomePage> {
                               Navigator.of(context).pop();
                             },
                             child: const Text('확인'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const EumQuizPage(
+                                    initialScore: 0,
+                                    initialQuestionCount: 100,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text('101번부터 테스트'),
                           ),
                         ],
                       );
@@ -398,15 +378,7 @@ class _HomePageState extends State<HomePage> {
                 style: const TextStyle(fontSize: 20, color: Colors.white70),
               ),
               const SizedBox(height: 10),
-              Text(
-                '오늘 남은 횟수: $_remainingPlays',
-                style: const TextStyle(
-                  fontSize: 24,
-                  color: Colors.cyanAccent,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 30),
+
               Text(
                 challengeMessage,
                 style: const TextStyle(fontSize: 18, color: Colors.white70),
@@ -533,9 +505,10 @@ class _HomePageState extends State<HomePage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       ),
                       onPressed: () => _loadAndStartQuiz(context, level),
-                      child: Text(level, style: const TextStyle(fontSize: 22)),
+                      child: Text(level, style: const TextStyle(fontSize: 18)),
                     );
                   }).toList(),
                 ),
@@ -639,6 +612,29 @@ class _HomePageState extends State<HomePage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const HanjaSearchPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.photo_album),
+                    label: const Text('갤러리'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.deepPurple,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const GalleryScreen(),
                         ),
                       );
                     },

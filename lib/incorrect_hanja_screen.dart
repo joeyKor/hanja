@@ -46,54 +46,6 @@ class IncorrectHanjaScreen extends StatefulWidget {
   State<IncorrectHanjaScreen> createState() => _IncorrectHanjaScreenState();
 }
 
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import 'package:intl/intl.dart';
-
-class IncorrectHanja {
-  final String character;
-  final String hoon;
-  final String eum;
-  final String level;
-  final String date;
-
-  IncorrectHanja({
-    required this.character,
-    required this.hoon,
-    required this.eum,
-    required this.level,
-    required this.date,
-  });
-
-  factory IncorrectHanja.fromJson(Map<String, dynamic> json) {
-    return IncorrectHanja(
-      character: json['character'],
-      hoon: json['hoon'],
-      eum: json['eum'],
-      level: json['level'],
-      date: json['date'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'character': character,
-      'hoon': hoon,
-      'eum': eum,
-      'level': level,
-      'date': date,
-    };
-  }
-}
-
-class IncorrectHanjaScreen extends StatefulWidget {
-  const IncorrectHanjaScreen({super.key});
-
-  @override
-  State<IncorrectHanjaScreen> createState() => _IncorrectHanjaScreenState();
-}
-
 class _IncorrectHanjaScreenState extends State<IncorrectHanjaScreen>
     with SingleTickerProviderStateMixin {
   List<IncorrectHanja> _todaysIncorrectHanja = [];
