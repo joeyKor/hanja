@@ -226,6 +226,53 @@ class _EumQuizPageState extends State<EumQuizPage> {
     await prefs.setString('daily_scores', json.encode(scores));
   }
 
+  Future<void> _unlockAndShowReward() async {
+    final prefs = await SharedPreferences.getInstance();
+    final unlockedImages = prefs.getStringList('unlocked_images') ?? [];
+
+    final allImageNumbers =
+        List.generate(70, (index) => (index + 1).toString().padLeft(3, '0'));
+    final lockedImages =
+        allImageNumbers.where((img) => !unlockedImages.contains(img)).toList();
+
+    if (lockedImages.isEmpty) {
+      // All images are unlocked, maybe show a message
+      return;
+    }
+
+    final random = Random();
+    final imageToUnlock = lockedImages[random.nextInt(lockedImages.length)];
+
+    unlockedImages.add(imageToUnlock);
+    await prefs.setStringList('unlocked_images', unlockedImages);
+
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('갤러리 해금!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/images/$imageToUnlock.png'),
+              const SizedBox(height: 16),
+              Text('$imageToUnlock번 그림을 획득했습니다!'),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('확인'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _gameOver() async {
     await _saveScore(_score);
     final rankingsRef = FirebaseFirestore.instance.collection('rankings');
@@ -296,6 +343,11 @@ class _EumQuizPageState extends State<EumQuizPage> {
                       await rankingsRef.doc(rankings.last.id).delete();
                     }
 
+                    if (_score > 150) {
+                      await _unlockAndShowReward();
+                    }
+
+                    if (!mounted) return;
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
@@ -317,7 +369,7 @@ class _EumQuizPageState extends State<EumQuizPage> {
         },
       );
     } else {
-      showDialog(
+      await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
@@ -345,13 +397,20 @@ class _EumQuizPageState extends State<EumQuizPage> {
               TextButton(
                 child: const Text('확인'),
                 onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  Navigator.of(context).pop();
                 },
               ),
             ],
           );
         },
       );
+
+      if (_score > 150) {
+        await _unlockAndShowReward();
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 

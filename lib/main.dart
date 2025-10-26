@@ -345,6 +345,124 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _unlockRandomGalleryImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final unlockedImages = prefs.getStringList('unlocked_images') ?? [];
+
+    final allImageNumbers =
+        List.generate(70, (index) => (index + 1).toString().padLeft(3, '0'));
+    final lockedImages =
+        allImageNumbers.where((img) => !unlockedImages.contains(img)).toList();
+
+    if (lockedImages.isEmpty) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('알림'),
+            content: const Text('모든 갤러리 이미지가 이미 해금되었습니다!'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('확인'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    final random = Random();
+    final imageToUnlock = lockedImages[random.nextInt(lockedImages.length)];
+
+    unlockedImages.add(imageToUnlock);
+    await prefs.setStringList('unlocked_images', unlockedImages);
+
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('갤러리 해금!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/images/$imageToUnlock.png'),
+              const SizedBox(height: 16),
+              Text('$imageToUnlock번 그림을 획득했습니다!'),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('확인'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showGalleryUnlockPasswordDialog(BuildContext context) {
+    final passwordController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('갤러리 해금 비밀번호'),
+          content: TextField(
+            controller: passwordController,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(hintText: '비밀번호를 입력하세요'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                if (passwordController.text == '9891') {
+                  await _unlockRandomGalleryImage();
+                } else {
+                  if (!mounted) return;
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text('오류'),
+                        content: const Text('비밀번호가 틀렸습니다.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('확인'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                }
+              },
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final levels = ['5급', '준4급', '4급', '준3급', '3급'];
@@ -593,28 +711,31 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                   ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.search),
-                    label: const Text('한자 검색'),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.teal,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 15,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const HanjaSearchPage(),
+                  GestureDetector(
+                    onLongPress: () => _showGalleryUnlockPasswordDialog(context),
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.search),
+                      label: const Text('한자 검색'),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.teal,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      );
-                    },
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 15,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HanjaSearchPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.photo_album),
