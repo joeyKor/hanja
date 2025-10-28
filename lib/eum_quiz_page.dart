@@ -1,3 +1,4 @@
+import 'package:hanja/gosa.dart'; // New import
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -26,6 +27,7 @@ class _EumQuizPageState extends State<EumQuizPage> {
   double _score = 0;
   int _questionCount = 0;
   Hanja? _currentHanja;
+  Gosa? _currentGosa; // New: Current Gosa for quiz
   final TextEditingController _eumController = TextEditingController();
   bool _answerLocked = false;
   int _countdown = 10;
@@ -33,7 +35,7 @@ class _EumQuizPageState extends State<EumQuizPage> {
   final FocusNode _focusNode = FocusNode();
 
   final Map<String, List<Hanja>> _allHanjaByLevel = {};
-  final List<Hanja> _allHanja = [];
+  final List<Gosa> _allGosa = []; // New: List to hold all Gosa data
   final List<Map<String, dynamic>> _sessionIncorrectHanja = [];
 
   @override
@@ -41,7 +43,7 @@ class _EumQuizPageState extends State<EumQuizPage> {
     super.initState();
     _score = widget.initialScore;
     _questionCount = widget.initialQuestionCount;
-    _loadAllHanja().then((_) {
+    _loadQuizData().then((_) {
       _startNewQuestion();
     });
   }
@@ -54,7 +56,7 @@ class _EumQuizPageState extends State<EumQuizPage> {
     super.dispose();
   }
 
-  Future<void> _loadAllHanja() async {
+  Future<void> _loadQuizData() async {
     final levels = {
       '5급': 'assets/hanja_5.json',
       '준4급': 'assets/hanja_jun4.json',
@@ -69,20 +71,51 @@ class _EumQuizPageState extends State<EumQuizPage> {
         final data = await json.decode(response) as List;
         final hanjaList = data.map((e) => Hanja.fromJson(e, level)).toList();
         _allHanjaByLevel[level] = hanjaList;
-        _allHanja.addAll(hanjaList);
       } catch (e) {
         // Ignore errors for now
       }
+    }
+
+    // New: Load Gosa data
+    try {
+      final String response = await rootBundle.loadString('assets/gosa.json');
+      final data = await json.decode(response) as List;
+      _allGosa.addAll(data.map((e) => Gosa.fromJson(e)));
+    } catch (e) {
+      print('Error loading gosa.json: $e');
     }
   }
 
   void _startNewQuestion() {
     _questionCount++;
     setState(() {
-      _currentHanja = _selectNextHanja();
       _eumController.clear();
       _answerLocked = false;
-      _countdown = 10;
+
+      if (_questionCount >= 61 && _questionCount <= 80) {
+        // Hanja Eum Sseugi (existing logic)
+        _currentHanja = _selectNextHanja();
+        _currentGosa = null;
+        _countdown = 10; // Existing countdown for Hanja Eum Sseugi
+      } else if (_questionCount >= 81 && _questionCount <= 90) {
+        // Gosa Seong-eo Sseugi (Request 1)
+        _currentGosa = _selectNextGosa();
+        _currentHanja = null;
+        _countdown = 17; // New countdown for Gosa Seong-eo Sseugi
+      } else if (_questionCount >= 91 && _questionCount <= 100) {
+        // Gosa Seong-eo Eum Sseugi (Request 2)
+        _currentGosa = _selectNextGosa();
+        _currentHanja = null;
+        _countdown = 19; // New countdown for Gosa Seong-eo Eum Sseugi
+      } else if (_questionCount > 100) {
+        // End of quiz after 100 questions
+        _gameOver();
+        return;
+      } else {
+        // This case should ideally not be reached if QuizPage transitions correctly
+        _gameOver();
+        return;
+      }
     });
     _focusNode.requestFocus();
     _startCountdown();
@@ -127,6 +160,11 @@ class _EumQuizPageState extends State<EumQuizPage> {
     return hanjaList[random.nextInt(hanjaList.length)];
   }
 
+  Gosa _selectNextGosa() {
+    final random = Random();
+    return _allGosa[random.nextInt(_allGosa.length)];
+  }
+
   void _handleAnswer() {
     if (_answerLocked) return;
 
@@ -136,19 +174,110 @@ class _EumQuizPageState extends State<EumQuizPage> {
       _answerLocked = true;
     });
 
-    if (_eumController.text == _currentHanja!.eum) {
+    // Show confirmation dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('입력 확인'),
+          content: Text('입력하신 답: "${_eumController.text}"\n맞습니까?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('다시쓸게요.'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  _answerLocked = false; // Unlock for re-entry
+                  _startCountdown(); // Restart countdown
+                });
+                _focusNode.requestFocus(); // Request focus back to TextField
+              },
+            ),
+            TextButton(
+              child: const Text('맞아요'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _processAnswer(); // Proceed with answer checking
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _processAnswer() {
+    bool isCorrect = false;
+    double points = 0;
+
+    if (_currentHanja != null) {
+      // Hanja Eum Sseugi
+      isCorrect = (_eumController.text == _currentHanja!.eum);
+      points = _getScoreForLevel(_currentHanja!.level);
+    } else if (_currentGosa != null) {
+      if (_questionCount >= 81 && _questionCount <= 90) {
+        // Gosa Seong-eo Sseugi (Request 1)
+        isCorrect = (_eumController.text == _currentGosa!.idiom);
+        points = 9;
+      } else if (_questionCount >= 91 && _questionCount <= 100) {
+        // Gosa Seong-eo Eum Sseugi (Request 2)
+        isCorrect = (_eumController.text == _currentGosa!.eum);
+        points = 15;
+      }
+    }
+
+    if (isCorrect) {
       setState(() {
-        _score += _getScoreForLevel(_currentHanja!.level);
+        _score += points;
+        if (_questionCount == 100) { // Request 3: Bonus for problem #100
+          _score += 50; // Bonus points
+        }
       });
       Future.delayed(const Duration(milliseconds: 1000), () {
         _startNewQuestion();
       });
     } else {
-      HapticFeedback.vibrate();
+      HapticFeedback.vibrate(); // Vibrate for incorrect answer
+
+      String correctText = '';
       if (_currentHanja != null) {
-        _saveIncorrectHanja(_currentHanja!);
+        _saveIncorrectHanja(_currentHanja!); // Save incorrect Hanja
+        correctText = '${_currentHanja!.hoon} ${_currentHanja!.eum}';
+      } else if (_currentGosa != null) {
+        if (_questionCount >= 81 && _questionCount <= 90) { // Gosa Seong-eo Sseugi
+          correctText = '${_currentGosa!.eum} (뜻: ${_currentGosa!.meaning})';
+        } else if (_questionCount >= 91 && _questionCount <= 100) { // Gosa Seong-eo Eum Sseugi
+          correctText = '${_currentGosa!.eum} (뜻: ${_currentGosa!.meaning})';
+        }
       }
-      _gameOver();
+
+      // Show dialog with correct answer if it's a Gosa question from 81 onwards
+      if ((_questionCount >= 81 && _currentGosa != null) && correctText.isNotEmpty) {
+        // Cancel the current countdown timer as we are showing a dialog
+        _countdownTimer?.cancel();
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('오답'),
+              content: Text('정답은 "$correctText" 입니다.'),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('확인'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _gameOver(); // Proceed to game over after showing answer
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      } else {
+        _gameOver(); // If not a Gosa question or no correctText, just game over
+      }
     }
   }
 
@@ -433,13 +562,35 @@ class _EumQuizPageState extends State<EumQuizPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_currentHanja == null) {
+    if (_currentHanja == null && _currentGosa == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    String questionText = '';
+    String levelText = '';
+    Color levelColor = Colors.white;
+
+    if (_currentHanja != null) {
+      questionText = _currentHanja!.character;
+      levelText = _currentHanja!.level;
+      levelColor = _getLevelColor(_currentHanja!.level);
+    } else if (_currentGosa != null) {
+      if (_questionCount >= 81 && _questionCount <= 90) {
+        // Gosa Seong-eo Sseugi
+        questionText = _currentGosa!.idiom;
+        levelText = '고사성어 쓰기';
+        levelColor = Colors.teal;
+      } else if (_questionCount >= 91 && _questionCount <= 100) {
+        // Gosa Seong-eo Eum Sseugi
+        questionText = _currentGosa!.meaning;
+        levelText = '고사성어 음 쓰기';
+        levelColor = Colors.indigo;
+      }
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('랭킹 도전 - $_questionCount번째 문제 (음쓰기)'),
+        title: Text('랭킹 도전 - $_questionCount번째 문제 ($levelText)'),
         centerTitle: true,
         automaticallyImplyLeading: false,
       ),
@@ -448,39 +599,60 @@ class _EumQuizPageState extends State<EumQuizPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            Column(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround, // Distribute space evenly
               children: [
-                Text(
-                  '점수: ${_score.toStringAsFixed(1)}',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                // 급수 (Level)
+                Column(
+                  children: [
+                    const Text('급수', style: TextStyle(fontSize: 16, color: Colors.white70)),
+                    Text(
+                      levelText,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: levelColor,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _currentHanja!.level,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: _getLevelColor(_currentHanja!.level),
-                  ),
+                // 타이머 (Timer)
+                Column(
+                  children: [
+                    const Text('남은 시간', style: TextStyle(fontSize: 16, color: Colors.white70)),
+                    Text(
+                      '$_countdown',
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.cyanAccent,
+                      ),
+                    ),
+                  ],
+                ),
+                // 점수 (Score)
+                Column(
+                  children: [
+                    const Text('점수', style: TextStyle(fontSize: 16, color: Colors.white70)),
+                    Text(
+                      _score.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            ),
-            Text(
-              '$_countdown',
-              style: const TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Colors.cyanAccent,
-              ),
             ),
             Expanded(
               child: Center(
                 child: Text(
-                  _currentHanja!.character,
-                  style: const TextStyle(fontSize: 120, color: Colors.white),
+                  questionText,
+                  style: TextStyle(
+                    fontSize: (_questionCount >= 91 && _questionCount <= 100) ? 24 : 120,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -493,9 +665,11 @@ class _EumQuizPageState extends State<EumQuizPage> {
                     autofocus: true,
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 30),
-                    decoration: const InputDecoration(
-                      hintText: '음을 입력하세요',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: (_questionCount >= 81 && _questionCount <= 90)
+                          ? '고사성어를 입력하세요'
+                          : '음을 입력하세요', // Hint changes based on question type
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
