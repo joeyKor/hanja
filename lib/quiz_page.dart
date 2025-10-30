@@ -9,7 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hanja/hanja.dart';
 import 'package:hanja/incorrect_hanja_screen.dart';
 import 'package:hanja/preparation_dialog.dart'; // Assuming this will be moved too
-import 'package:hanja/eum_quiz_page.dart'; // Import EumQuizPage
+import 'package:hanja/eum_quiz_page.dart';
+import 'package:hanja/ending_dialog.dart';
 
 class QuizPage extends StatefulWidget {
   final List<Hanja> quizHanja;
@@ -52,6 +53,11 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _startNewQuestion() {
+    if (_currentIndex >= 100) {
+      _showResult();
+      return;
+    }
+
     if (_currentIndex + 1 >= 61) { // If it's the 61st question or beyond
       Navigator.pushReplacement(
         context,
@@ -193,6 +199,17 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _showResult() {
+    if (widget.quizHanja.length == 100) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const EndingDialog();
+        },
+      );
+      return;
+    }
+
     final passed = _score >= 8; // Passing threshold is 8 correct answers
     if (passed && widget.onQuizPassed != null) {
       widget.onQuizPassed!(widget.level);

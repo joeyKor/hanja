@@ -1,3 +1,4 @@
+import 'package:hanja/ending_dialog.dart';
 import 'package:hanja/gosa.dart'; // New import
 import 'dart:async';
 import 'dart:convert';
@@ -403,6 +404,16 @@ class _EumQuizPageState extends State<EumQuizPage> {
   }
 
   Future<void> _gameOver() async {
+    if (_questionCount > 100) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const EndingDialog();
+        },
+      );
+    }
+
     await _saveScore(_score);
     final rankingsRef = FirebaseFirestore.instance.collection('rankings');
     final querySnapshot = await rankingsRef
